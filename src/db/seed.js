@@ -1,11 +1,3 @@
-/**
- * Seed script — creates a default super_admin user
- * Run: node src/db/seed.js
- *
- * Default credentials (change immediately after first login):
- *   Email:    admin@ikadou.com
- *   Password: Ikadou@2025!
- */
 
 const bcrypt = require('bcryptjs');
 const { pool } = require('../data/db');

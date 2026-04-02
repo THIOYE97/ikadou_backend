@@ -14,15 +14,14 @@ API REST Node.js / Express pour le projet Ikadou — vente sécurisée de terrai
 
 ```bash
 npm install
-cp .env.example .env
-# Editer .env avec vos paramètres PostgreSQL
+
 ```
 
 ## Base de données
 
 ```bash
-# 1. Créer la DB
-createdb ikadou_db
+
+
 
 # 2. Appliquer le schéma
 npm run db:migrate
@@ -31,9 +30,6 @@ npm run db:migrate
 npm run db:seed
 ```
 
-**Identifiants par défaut** (à changer immédiatement) :
-- Email : `admin@ikadou.com`
-- Mot de passe : `Ikadou@2025!`
 
 ## Démarrage
 
@@ -47,20 +43,7 @@ npm start
 
 L'API démarre sur `http://localhost:5000`
 
-## Endpoints Phase 1
 
-| Méthode | Route                      | Description                  | Auth |
-|---------|----------------------------|------------------------------|------|
-| POST    | `/api/v1/auth/login`       | Connexion                    | ❌   |
-| POST    | `/api/v1/auth/refresh`     | Rafraîchir le token          | ❌   |
-| POST    | `/api/v1/auth/logout`      | Déconnexion                  | ✅   |
-| GET     | `/api/v1/auth/me`          | Profil courant               | ✅   |
-| POST    | `/api/v1/auth/change-password` | Changer le mot de passe  | ✅   |
-| GET     | `/api/v1/users`            | Liste utilisateurs internes  | ✅ manager+ |
-| POST    | `/api/v1/users`            | Créer un utilisateur interne | ✅ admin+ |
-| GET     | `/api/v1/users/:id`        | Fiche utilisateur            | ✅ manager+ |
-| PATCH   | `/api/v1/users/:id`        | Modifier un utilisateur      | ✅ admin+ |
-| GET     | `/health`                  | Health check                 | ❌   |
 
 ## Architecture
 
