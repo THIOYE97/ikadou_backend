@@ -4,11 +4,12 @@
   "description": "Ikadou — Backend API (terrains Mali diaspora)",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "db:migrate": "node src/db/migrate.js",
-    "db:seed": "node src/db/seed.js"
-  },
+  "start": "node src/server.js",
+  "dev": "nodemon src/server.js",
+  "db:migrate": "node src/db/migrate.js",
+  "db:seed": "node src/db/seed.js",
+  "prod": "NODE_ENV=production node src/server.js"
+},
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",
@@ -26,6 +27,7 @@
     "nodemailer": "^8.0.4",
     "pg": "^8.11.5",
     "sharp": "^0.33.4",
+    "stripe": "^21.0.1",
     "twilio": "^5.1.0",
     "uuid": "^9.0.1",
     "winston": "^3.13.0"

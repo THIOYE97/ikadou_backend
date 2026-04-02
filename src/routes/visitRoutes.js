@@ -19,55 +19,6 @@ const validate = (req, res, next) => {
 
 router.use(requireAuth);
 
-// ─── GET /visits ──────────────────────────────────────────
-
-router.get('/', async (req, res, next) => {
-  try {
-    const { status, agent_id, from_date, to_date, page = 1, limit = 20 } = req.query;
-    const params = [];
-    const conditions = [];
-
-    if (status)    { params.push(status);    conditions.push(`v.status = $${params.length}`); }
-    if (agent_id)  { params.push(agent_id);  conditions.push(`v.agent_id = $${params.length}`); }
-    if (from_date) { params.push(from_date); conditions.push(`v.visit_date >= $${params.length}`); }
-    if (to_date)   { params.push(to_date);   conditions.push(`v.visit_date <= $${params.length}`); }
-
-    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-    const offset = (page - 1) * limit;
-
-    const countRes = await query(`SELECT COUNT(*) FROM visits v ${where}`, params);
-    const total = parseInt(countRes.rows[0].count, 10);
-
-    params.push(Number(limit), offset);
-    const rows = await query(
-      `SELECT
-         v.id, v.visit_date, v.visit_time, v.status, v.notes,
-         v.created_at, v.updated_at,
-         t.title AS terrain_title, t.ref AS terrain_ref,
-         a.first_name || ' ' || a.last_name AS agent_name, v.agent_id,
-         COALESCE(
-           c.first_name || ' ' || c.last_name,
-           l.first_name || ' ' || l.last_name
-         ) AS client_name,
-         v.client_id, v.lead_id
-       FROM visits v
-       LEFT JOIN terrains t  ON v.terrain_id = t.id
-       LEFT JOIN agents a    ON v.agent_id = a.id
-       LEFT JOIN clients c   ON v.client_id = c.id
-       LEFT JOIN leads l     ON v.lead_id = l.id
-       ${where}
-       ORDER BY v.visit_date ASC, v.visit_time ASC
-       LIMIT $${params.length - 1} OFFSET $${params.length}`,
-      params
-    );
-
-    return res.json({
-      success: true,
-      data: rows.rows,
-      meta: { total, page: +page, limit: +limit, pages: Math.ceil(total / limit) },
-    });
-  } catch (error) { next(error); }
-});
 
 // ─── POST /visits ─────────────────────────────────────────
 
@@ -125,6 +76,57 @@ router.post(
     } catch (error) { next(error); }
   }
 );
+
+// ─── GET /visits ──────────────────────────────────────────
+
+router.get('/', async (req, res, next) => {
+  try {
+    const { status, agent_id, from_date, to_date, page = 1, limit = 20 } = req.query;
+    const params = [];
+    const conditions = [];
+
+    if (status)    { params.push(status);    conditions.push(`v.status = $${params.length}`); }
+    if (agent_id)  { params.push(agent_id);  conditions.push(`v.agent_id = $${params.length}`); }
+    if (from_date) { params.push(from_date); conditions.push(`v.visit_date >= $${params.length}`); }
+    if (to_date)   { params.push(to_date);   conditions.push(`v.visit_date <= $${params.length}`); }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const offset = (page - 1) * limit;
+
+    const countRes = await query(`SELECT COUNT(*) FROM visits v ${where}`, params);
+    const total = parseInt(countRes.rows[0].count, 10);
+
+    params.push(Number(limit), offset);
+    const rows = await query(
+      `SELECT
+         v.id, v.visit_date, v.visit_time, v.status, v.notes,
+         v.created_at, v.updated_at,
+         t.title AS terrain_title, t.ref AS terrain_ref,
+         a.first_name || ' ' || a.last_name AS agent_name, v.agent_id,
+         COALESCE(
+           c.first_name || ' ' || c.last_name,
+           l.first_name || ' ' || l.last_name
+         ) AS client_name,
+         v.client_id, v.lead_id
+       FROM visits v
+       LEFT JOIN terrains t  ON v.terrain_id = t.id
+       LEFT JOIN agents a    ON v.agent_id = a.id
+       LEFT JOIN clients c   ON v.client_id = c.id
+       LEFT JOIN leads l     ON v.lead_id = l.id
+       ${where}
+       ORDER BY v.visit_date ASC, v.visit_time ASC
+       LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      params
+    );
+
+    return res.json({
+      success: true,
+      data: rows.rows,
+      meta: { total, page: +page, limit: +limit, pages: Math.ceil(total / limit) },
+    });
+  } catch (error) { next(error); }
+});
+
 
 // ─── GET /visits/:id ──────────────────────────────────────
 

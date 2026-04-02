@@ -107,5 +107,24 @@ const config = {
     level: process.env.LOG_LEVEL || 'info',
   },
 };
+config.stripe = {
+  secretKey:      process.env.STRIPE_SECRET_KEY,
+  publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+  webhookSecret:  process.env.STRIPE_WEBHOOK_SECRET,
+  currency:       process.env.STRIPE_CURRENCY || 'eur',
+};
 
+config.danapay = {
+  apiKey:        process.env.DANAPAY_API_KEY,
+  apiSecret:     process.env.DANAPAY_API_SECRET,
+  baseUrl:       process.env.DANAPAY_BASE_URL || 'https://api.danapay.io/v1',
+  webhookSecret: process.env.DANAPAY_WEBHOOK_SECRET,
+  currency:      process.env.DANAPAY_CURRENCY || 'XOF',
+};
+
+config.payment = {
+  callbackBaseUrl: process.env.PAYMENT_CALLBACK_BASE_URL || 'http://localhost:5000',
+  successUrl:      process.env.PAYMENT_SUCCESS_URL || 'http://localhost:3000/payment/success',
+  cancelUrl:       process.env.PAYMENT_CANCEL_URL  || 'http://localhost:3000/payment/cancel',
+};
 module.exports = config;
