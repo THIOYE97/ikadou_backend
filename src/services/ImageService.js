@@ -1,30 +1,27 @@
 const multer = require('multer');
 const sharp = require('sharp');
-const path = require('path');
-const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const { Readable } = require('stream');
+const { v2: cloudinary } = require('cloudinary');
+
 const config = require('../config/env');
 const logger = require('../utils/logger');
 
-// ─── Upload directory setup ───────────────────────────────
+// ─── Cloudinary config ────────────────────────────────────
 
-const UPLOAD_DIR = path.resolve(config.upload.dir || './uploads');
-const IMAGES_DIR = path.join(UPLOAD_DIR, 'images');
-
-// Ensure directories exist
-[UPLOAD_DIR, IMAGES_DIR].forEach((dir) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-    logger.info(`Created upload directory: ${dir}`);
-  }
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || config.cloudinary?.cloudName,
+  api_key: process.env.CLOUDINARY_API_KEY || config.cloudinary?.apiKey,
+  api_secret: process.env.CLOUDINARY_API_SECRET || config.cloudinary?.apiSecret,
+  secure: true,
 });
 
-// ─── Multer — memory storage (we process before writing) ──
+// ─── Multer — memory storage (same contract as before) ────
 
 const memoryUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: (config.upload.maxSizeMb || 10) * 1024 * 1024, // default 10 MB
+    fileSize: (config.upload?.maxSizeMb || 10) * 1024 * 1024,
     files: 10,
   },
   fileFilter: (req, file, cb) => {
@@ -40,33 +37,29 @@ const memoryUpload = multer({
 // ─── Image compression presets ────────────────────────────
 
 const PRESETS = {
-  // Main display image — full quality, max 1400px
   terrain_main: { width: 1400, height: 900, quality: 82 },
-  // Thumbnail — small, very compressed
   terrain_thumb: { width: 400, height: 260, quality: 70 },
-  // Gallery — balanced
   terrain_gallery: { width: 1000, height: 667, quality: 78 },
-  // Default fallback
   default: { width: 1200, height: 800, quality: 80 },
 };
 
 /**
  * Compress and convert an image buffer to WebP.
  *
- * @param {Buffer} inputBuffer  - Raw image buffer from multer
- * @param {string} preset       - One of PRESETS keys
+ * @param {Buffer} inputBuffer
+ * @param {string} preset
  * @returns {Promise<{buffer: Buffer, width: number, height: number, sizeBytes: number}>}
  */
 const compressImage = async (inputBuffer, preset = 'default') => {
   const { width, height, quality } = PRESETS[preset] || PRESETS.default;
 
   const compressed = await sharp(inputBuffer)
-    .rotate()                            // auto-rotate based on EXIF
+    .rotate()
     .resize(width, height, {
-      fit: 'inside',                     // never upscale, keep aspect ratio
+      fit: 'inside',
       withoutEnlargement: true,
     })
-    .webp({ quality, effort: 4 })        // convert to WebP
+    .webp({ quality, effort: 4 })
     .toBuffer({ resolveWithObject: true });
 
   return {
@@ -78,47 +71,98 @@ const compressImage = async (inputBuffer, preset = 'default') => {
 };
 
 /**
- * Save a compressed image to disk and return the relative URL path.
+ * Upload a buffer to Cloudinary using upload_stream.
+ *
+ * @param {Buffer} buffer
+ * @param {object} options
+ * @returns {Promise<object>}
+ */
+const uploadBufferToCloudinary = (buffer, options = {}) =>
+  new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(options, (error, result) => {
+      if (error) return reject(error);
+      resolve(result);
+    });
+
+    Readable.from(buffer).pipe(uploadStream);
+  });
+
+/**
+ * Save a compressed image to Cloudinary and return the same shape
+ * expected by the existing terrain image routes.
  *
  * @param {Buffer} inputBuffer
  * @param {string} preset
- * @param {string} [subdir]   - subdirectory inside images/ (e.g. 'terrains')
- * @returns {Promise<{url: string, storageKey: string, width, height, sizeBytes, originalSize}>}
+ * @param {string} subdir
+ * @returns {Promise<{url: string, storageKey: string, width: number, height: number, sizeBytes: number, originalSize: number, format: string, version: string | number}>}
  */
 const saveImage = async (inputBuffer, preset = 'default', subdir = 'terrains') => {
   const originalSize = inputBuffer.length;
-  const dir = path.join(IMAGES_DIR, subdir);
-
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
-  const filename = `${uuidv4()}.webp`;
-  const filePath = path.join(dir, filename);
-  const storageKey = `images/${subdir}/${filename}`;
-  const url = `/uploads/${storageKey}`;
+  const publicId = `${subdir}/${uuidv4()}`;
 
   const { buffer, width, height, sizeBytes } = await compressImage(inputBuffer, preset);
 
-  fs.writeFileSync(filePath, buffer);
+  const uploaded = await uploadBufferToCloudinary(buffer, {
+    folder: 'ikadou',
+    public_id: publicId,
+    resource_type: 'image',
+    overwrite: false,
+    format: 'webp',
+  });
 
   const ratio = ((1 - sizeBytes / originalSize) * 100).toFixed(1);
-  logger.info(`Image saved: ${storageKey} | ${(originalSize / 1024).toFixed(0)}KB → ${(sizeBytes / 1024).toFixed(0)}KB (−${ratio}%)`);
 
-  return { url, storageKey, width, height, sizeBytes, originalSize };
+  logger.info(
+    `Image uploaded to Cloudinary: ${uploaded.public_id} | ${(originalSize / 1024).toFixed(0)}KB → ${(sizeBytes / 1024).toFixed(0)}KB (-${ratio}%)`
+  );
+
+  return {
+    url: uploaded.secure_url,
+    storageKey: uploaded.public_id,
+    width: uploaded.width || width,
+    height: uploaded.height || height,
+    sizeBytes: uploaded.bytes || sizeBytes,
+    originalSize,
+    format: uploaded.format || 'webp',
+    version: uploaded.version,
+  };
 };
 
 /**
- * Delete an image from disk by its storageKey.
+ * Delete an image from Cloudinary by public_id / storageKey.
+ *
+ * @param {string} storageKey
+ * @returns {Promise<void>}
  */
-const deleteImage = (storageKey) => {
+const deleteImage = async (storageKey) => {
+  if (!storageKey) return;
+
   try {
-    const filePath = path.join(UPLOAD_DIR, storageKey);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      logger.info(`Image deleted: ${storageKey}`);
-    }
+    const result = await cloudinary.uploader.destroy(storageKey, {
+      resource_type: 'image',
+      invalidate: true,
+    });
+
+    logger.info(`Cloudinary delete result for ${storageKey}: ${result.result}`);
   } catch (err) {
-    logger.warn(`Could not delete image ${storageKey}: ${err.message}`);
+    logger.warn(`Could not delete Cloudinary image ${storageKey}: ${err.message}`);
   }
+};
+
+/**
+ * Optional helper to build transformed delivery URLs later if needed.
+ *
+ * @param {string} storageKey
+ * @param {object} transformation
+ * @returns {string}
+ */
+const buildImageUrl = (storageKey, transformation = {}) => {
+  return cloudinary.url(storageKey, {
+    secure: true,
+    fetch_format: 'auto',
+    quality: 'auto',
+    ...transformation,
+  });
 };
 
 module.exports = {
@@ -126,6 +170,7 @@ module.exports = {
   compressImage,
   saveImage,
   deleteImage,
-  IMAGES_DIR,
-  UPLOAD_DIR,
+  buildImageUrl,
+  cloudinary,
+  PRESETS,
 };

@@ -127,4 +127,11 @@ config.payment = {
   successUrl:      process.env.PAYMENT_SUCCESS_URL || 'http://localhost:3000/payment/success',
   cancelUrl:       process.env.PAYMENT_CANCEL_URL  || 'http://localhost:3000/payment/cancel',
 };
+
+config.cloudinary= {
+  cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+  apiKey: process.env.CLOUDINARY_API_KEY,
+  apiSecret: process.env.CLOUDINARY_API_SECRET,
+}
+
 module.exports = config;

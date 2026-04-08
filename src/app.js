@@ -73,6 +73,10 @@ app.use(`${API}/notifications`, require('./routes/notificationRoutes'));
 app.use(`${API}/dashboard`, require('./routes/dashboardRoutes'));
 app.use(`${API}/reports`, require('./routes/reportRoutes'));
 app.use(`${API}/client/notifications`, require('./routes/clientNotificationsRoutes'));
+app.use(`${API}/public`, require('./routes/publicRoutes'));
+app.use(`${API}/client-auth`, require('./routes/clientAuthRoutes'));
+app.use(`${API}/client/profile`, require('./routes/clientProfileRoutes'));
+app.use(`${API}/client/visits`, require('./routes/clientVisitRoutes'));
 
 app.use((req, res) =>
   res.status(404).json({ success: false, message: 'Route not found' })
