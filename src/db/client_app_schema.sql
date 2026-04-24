@@ -247,3 +247,7 @@ ON CONFLICT (client_id) DO NOTHING;
 --     leads.status = 'converted'
 --     leads.converted_at = NOW()
 --     leads.converted_by = 'system' or user context
+
+
+ALTER TABLE clients
+ADD COLUMN IF NOT EXISTS welcome_email_sent_at TIMESTAMPTZ;

@@ -320,6 +320,262 @@ const notifyTicketOpened = async ({ client, ticket, sentBy }) => {
   });
 };
 
+const notifyClientWelcomeConfirmed = async ({ client, sentBy = null }) => {
+  if (!client?.email) return null;
+
+  return send({
+    channel: 'email',
+    type: 'client_welcome_confirmed',
+    recipient: client.email,
+    vars: {
+      first_name: client.first_name || client.firstName || 'cher client',
+      app_url: process.env.CLIENT_APP_URL || process.env.APP_URL || '',
+    },
+    relatedType: 'client',
+    relatedId: client.id,
+    sentBy,
+  });
+};
+
+const notifyVisitCreated = async ({ client, visit, terrain, sentBy = null }) => {
+  if (!client?.email) return null;
+
+  return send({
+    channel: 'email',
+    type: 'visit_created',
+    recipient: client.email,
+    vars: {
+      first_name: client.first_name || 'cher client',
+      terrain_title: terrain?.title || 'Terrain Ikadou',
+      visit_date: visit?.visit_date || visit?.visitDate || '',
+      visit_time: String(visit?.visit_time || visit?.visitTime || '').substring(0, 5),
+    },
+    relatedType: 'visit',
+    relatedId: visit?.id,
+    sentBy,
+  });
+};
+
+const notifyVisitCompleted = async ({ client, visit, terrain, sentBy = null }) => {
+  if (!client?.email) return null;
+
+  return send({
+    channel: 'email',
+    type: 'visit_completed',
+    recipient: client.email,
+    vars: {
+      first_name: client.first_name || 'cher client',
+      terrain_title: terrain?.title || 'Terrain Ikadou',
+      app_url: process.env.CLIENT_APP_URL || process.env.APP_URL || '',
+    },
+    relatedType: 'visit',
+    relatedId: visit?.id,
+    sentBy,
+  });
+};
+
+const notifyPaymentCreated = async ({ client, payment, terrain, sentBy = null }) => {
+  if (!client?.email) return null;
+
+  return send({
+    channel: 'email',
+    type: 'payment_created',
+    recipient: client.email,
+    vars: {
+      first_name: client.first_name || 'cher client',
+      payment_ref: payment?.reference_code || payment?.ref || payment?.id,
+      amount: new Intl.NumberFormat('fr-FR').format(
+        Number(payment?.amount_xof || payment?.amount || 0)
+      ),
+      currency: payment?.currency || 'FCFA',
+      terrain_title: terrain?.title || payment?.terrain_title || 'Terrain Ikadou',
+    },
+    relatedType: 'payment',
+    relatedId: payment?.id,
+    sentBy,
+  });
+};
+
+const notifyPaymentProofReceived = async ({ client, payment, terrain, sentBy = null }) => {
+  if (!client?.email) return null;
+
+  return send({
+    channel: 'email',
+    type: 'payment_proof_received',
+    recipient: client.email,
+    vars: {
+      first_name: client.first_name || 'cher client',
+      payment_ref: payment?.reference_code || payment?.ref || payment?.id,
+      terrain_title: terrain?.title || payment?.terrain_title || 'Terrain Ikadou',
+    },
+    relatedType: 'payment',
+    relatedId: payment?.id,
+    sentBy,
+  });
+};
+
+const notifyPaymentProofApproved = async ({ client, payment, terrain, sentBy = null }) => {
+  if (!client?.email) return null;
+
+  return send({
+    channel: 'email',
+    type: 'payment_proof_approved',
+    recipient: client.email,
+    vars: {
+      first_name: client.first_name || 'cher client',
+      payment_ref: payment?.reference_code || payment?.ref || payment?.id,
+      amount: new Intl.NumberFormat('fr-FR').format(
+        Number(payment?.amount_xof || payment?.amount || 0)
+      ),
+      currency: payment?.currency || 'FCFA',
+      terrain_title: terrain?.title || payment?.terrain_title || 'Terrain Ikadou',
+    },
+    relatedType: 'payment',
+    relatedId: payment?.id,
+    sentBy,
+  });
+};
+
+const notifyPaymentProofRejected = async ({ client, payment, terrain, reason, sentBy = null }) => {
+  if (!client?.email) return null;
+
+  return send({
+    channel: 'email',
+    type: 'payment_proof_rejected',
+    recipient: client.email,
+    vars: {
+      first_name: client.first_name || 'cher client',
+      payment_ref: payment?.reference_code || payment?.ref || payment?.id,
+      reason: reason || 'Document non conforme ou illisible',
+      terrain_title: terrain?.title || payment?.terrain_title || 'Terrain Ikadou',
+    },
+    relatedType: 'payment',
+    relatedId: payment?.id,
+    sentBy,
+  });
+};
+
+const notifySupportReply = async ({ client, ticket, message, sentBy = null }) => {
+  if (!client?.email) return null;
+
+  return send({
+    channel: 'email',
+    type: 'support_reply',
+    recipient: client.email,
+    vars: {
+      first_name: client.first_name || 'cher client',
+      ticket_ref: ticket?.ref || ticket?.id,
+      subject: ticket?.subject || 'Demande support',
+      reply_preview: String(message || '').slice(0, 180),
+      app_url: process.env.CLIENT_APP_URL || process.env.APP_URL || '',
+    },
+    relatedType: 'ticket',
+    relatedId: ticket?.id,
+    sentBy,
+  });
+};
+
+const notifySupportStatusChanged = async ({ client, ticket, statusLabel, sentBy = null }) => {
+  if (!client?.email) return null;
+
+  return send({
+    channel: 'email',
+    type: 'support_status_changed',
+    recipient: client.email,
+    vars: {
+      first_name: client.first_name || 'cher client',
+      ticket_ref: ticket?.ref || ticket?.id,
+      subject: ticket?.subject || 'Demande support',
+      status_label: statusLabel || ticket?.status || '',
+    },
+    relatedType: 'ticket',
+    relatedId: ticket?.id,
+    sentBy,
+  });
+};
+const notifyVisitCancelled = async ({ client, visit, terrain, reason, sentBy = null }) => {
+  if (!client?.email) return null;
+
+  return send({
+    channel: 'email',
+    type: 'visit_cancelled',
+    recipient: client.email,
+    vars: {
+      first_name: client.first_name || 'cher client',
+      terrain_title: terrain?.title || 'Terrain Ikadou',
+      visit_date: visit?.visit_date || '',
+      visit_time: String(visit?.visit_time || '').substring(0, 5),
+      cancel_reason: reason || '',
+      app_url: process.env.CLIENT_APP_URL || process.env.APP_URL || '',
+    },
+    relatedType: 'visit',
+    relatedId: visit?.id,
+    sentBy,
+  });
+};
+
+const notifyVisitRescheduled = async ({ client, visit, terrain, agent, sentBy = null }) => {
+  if (!client?.email) return null;
+
+  return send({
+    channel: 'email',
+    type: 'visit_rescheduled',
+    recipient: client.email,
+    vars: {
+      first_name: client.first_name || 'cher client',
+      terrain_title: terrain?.title || 'Terrain Ikadou',
+      new_date: visit?.visit_date || '',
+      new_time: String(visit?.visit_time || '').substring(0, 5),
+      agent_name: agent ? `${agent.first_name || ''} ${agent.last_name || ''}`.trim() : 'Notre équipe',
+      agent_phone: agent?.phone || '',
+    },
+    relatedType: 'visit',
+    relatedId: visit?.id,
+    sentBy,
+  });
+};
+
+const notifyPaymentFailed = async ({ client, payment, terrain, sentBy = null }) => {
+  if (!client?.email) return null;
+
+  return send({
+    channel: 'email',
+    type: 'payment_failed',
+    recipient: client.email,
+    vars: {
+      first_name: client.first_name || 'cher client',
+      payment_ref: payment?.reference_code || payment?.ref || payment?.id,
+      amount: new Intl.NumberFormat('fr-FR').format(Number(payment?.amount || payment?.amount_xof || 0)),
+      currency: payment?.currency || 'FCFA',
+      terrain_title: terrain?.title || 'Terrain Ikadou',
+      app_url: process.env.CLIENT_APP_URL || process.env.APP_URL || '',
+    },
+    relatedType: 'payment',
+    relatedId: payment?.id,
+    sentBy,
+  });
+};
+
+const notifyPaymentPending = async ({ client, payment, terrain, sentBy = null }) => {
+  if (!client?.email) return null;
+
+  return send({
+    channel: 'email',
+    type: 'payment_pending',
+    recipient: client.email,
+    vars: {
+      first_name: client.first_name || 'cher client',
+      payment_ref: payment?.reference_code || payment?.ref || payment?.id,
+      amount: new Intl.NumberFormat('fr-FR').format(Number(payment?.amount || payment?.amount_xof || 0)),
+      currency: payment?.currency || 'FCFA',
+      terrain_title: terrain?.title || 'Terrain Ikadou',
+    },
+    relatedType: 'payment',
+    relatedId: payment?.id,
+    sentBy,
+  });
+};
+
 module.exports = {
   send,
   sendMultiChannel,
@@ -327,4 +583,17 @@ module.exports = {
   notifyVisitConfirmed,
   notifyPaymentConfirmed,
   notifyTicketOpened,
+  notifyClientWelcomeConfirmed,
+  notifyVisitCreated,
+  notifyVisitCompleted,
+  notifyPaymentCreated,
+  notifyPaymentProofReceived,
+  notifyPaymentProofApproved,
+  notifyPaymentProofRejected,
+  notifySupportReply,
+  notifySupportStatusChanged,
+  notifyVisitCancelled,
+notifyVisitRescheduled,
+notifyPaymentFailed,
+notifyPaymentPending,
 };

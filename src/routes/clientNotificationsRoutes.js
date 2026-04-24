@@ -5,13 +5,7 @@ const router = express.Router();
 
 const { query } = require('../data/db');
 const HttpError = require('../utils/httpError');
-const { requireAuth, requireMinRole } = require('../middleware/requireAuth');
-
-const NotificationService = require('../services/notificationService');
-const { verifyConnection } = require('../services/emailService');
-const { sendSms } = require('../services/smsService');
-const { sendWhatsApp } = require('../services/whatsappService');
-const { sendPush } = require('../services/pushService');
+const requireClientAuth = require('../middleware/requireClientAuth');
 
 const validate = (req, res, next) => {
   const errors = validationResult(req);
@@ -24,16 +18,10 @@ const validate = (req, res, next) => {
   next();
 };
 
-router.use(requireAuth);
+router.use(requireClientAuth);
 
-/**
- * Helper:
- * adapte ici selon la structure réelle de ton auth middleware.
- * Si ton middleware met l'utilisateur client dans req.client, garde req.client.id.
- * Sinon si c'est req.user.id pour un client authentifié, remplace en conséquence.
- */
 const getClientId = (req) => {
-  const clientId = req.client?.id || req.user?.client_id || req.user?.id;
+  const clientId = req.client?.id;
   if (!clientId) {
     throw HttpError.unauthorized('Client non authentifié');
   }
@@ -45,12 +33,10 @@ const getClientId = (req) => {
 // GET /client/notifications/preferences
 // ──────────────────────────────────────────────────────────
 //
-
 router.get('/preferences', async (req, res, next) => {
   try {
     const clientId = getClientId(req);
 
-    // ensure row exists
     await query(
       `
       INSERT INTO client_notification_prefs (client_id)
@@ -80,197 +66,13 @@ router.get('/preferences', async (req, res, next) => {
 
     return res.json({
       success: true,
-      data: result.rows[0],
+      data: result.rows[0] || null,
     });
   } catch (error) {
     next(error);
   }
 });
 
-// ─── POST /notifications/send ────────────────────────────
-
-router.post(
-  '/send',
-  requireMinRole('support'),
-  [
-    body('channel').isIn(['email', 'sms', 'whatsapp', 'push', 'in_app']),
-    body('type').trim().notEmpty(),
-    body('recipient').trim().notEmpty(),
-    body('vars').optional().isObject(),
-    body('subject').optional().isString(),
-    body('body').optional().isString(),
-    body('relatedType').optional().isString(),
-    body('relatedId').optional().isUUID(),
-  ],
-  validate,
-  async (req, res, next) => {
-    try {
-      const {
-        channel,
-        type,
-        recipient,
-        vars = {},
-        subject,
-        body: rawBody,
-        relatedType,
-        relatedId,
-      } = req.body;
-
-      const result = await NotificationService.send({
-        channel,
-        type,
-        recipient,
-        vars,
-        subject,
-        body: rawBody,
-        relatedType,
-        relatedId,
-        sentBy: req.user.id,
-      });
-
-      return res.status(201).json({
-        success: true,
-        data: result,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-// ─── POST /notifications/send-multi ──────────────────────
-
-router.post(
-  '/send-multi',
-  requireMinRole('support'),
-  [
-    body('channels').isArray({ min: 1 }),
-    body('channels.*').isIn(['email', 'sms', 'whatsapp', 'push']),
-    body('type').trim().notEmpty(),
-    body('recipients').isObject(),
-    body('vars').optional().isObject(),
-    body('relatedType').optional().isString(),
-    body('relatedId').optional().isUUID(),
-  ],
-  validate,
-  async (req, res, next) => {
-    try {
-      const {
-        channels,
-        recipients,
-        type,
-        vars = {},
-        relatedType,
-        relatedId,
-      } = req.body;
-
-      const result = await NotificationService.sendMultiChannel({
-        channels,
-        recipients,
-        type,
-        vars,
-        relatedType,
-        relatedId,
-        sentBy: req.user.id,
-      });
-
-      return res.status(201).json({
-        success: true,
-        data: result,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-// ─── POST /notifications/push/topic ──────────────────────
-
-router.post(
-  '/push/topic',
-  requireMinRole('admin', 'super_admin'),
-  [
-    body('topic').trim().notEmpty(),
-    body('type').trim().notEmpty(),
-    body('vars').optional().isObject(),
-  ],
-  validate,
-  async (req, res, next) => {
-    try {
-      const { topic, type, vars = {} } = req.body;
-
-      const result = await NotificationService.broadcastPush({
-        topic,
-        type,
-        vars,
-        sentBy: req.user.id,
-      });
-
-      return res.status(201).json({
-        success: true,
-        data: result,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-// ─── POST /notifications/test-config ─────────────────────
-
-router.post(
-  '/test-config',
-  requireMinRole('admin', 'super_admin'),
-  [
-    body('channel').isIn(['email', 'sms', 'whatsapp', 'push']),
-    body('recipient').trim().notEmpty(),
-  ],
-  validate,
-  async (req, res, next) => {
-    try {
-      const { channel, recipient } = req.body;
-
-      let result;
-
-      if (channel === 'email') {
-        await verifyConnection();
-        result = await NotificationService.send({
-          channel: 'email',
-          type: 'custom',
-          recipient,
-          subject: 'Test configuration email Ikadou',
-          body: '<p>Configuration email OK.</p>',
-          vars: {},
-          sentBy: req.user.id,
-        });
-      } else if (channel === 'sms') {
-        result = await sendSms({
-          to: recipient,
-          body: '[Ikadou] Test configuration SMS OK.',
-        });
-      } else if (channel === 'whatsapp') {
-        result = await sendWhatsApp({
-          to: recipient,
-          body: '✅ Ikadou — Test configuration WhatsApp OK.',
-        });
-      } else if (channel === 'push') {
-        result = await sendPush({
-          token: recipient,
-          title: 'Ikadou',
-          body: 'Test configuration push OK.',
-          data: { type: 'test', screen: 'Home' },
-        });
-      }
-
-      return res.status(201).json({
-        success: true,
-        data: result,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-);
 //
 // ──────────────────────────────────────────────────────────
 // PATCH /client/notifications/preferences
@@ -390,7 +192,6 @@ router.post(
         [clientId, token, platform]
       );
 
-      // convenience cache on clients table
       await query(
         `
         UPDATE clients
@@ -436,7 +237,6 @@ router.delete(
         [clientId, token]
       );
 
-      // si c'était le token en cache, on le vide
       await query(
         `
         UPDATE clients
@@ -460,7 +260,6 @@ router.delete(
 //
 // ──────────────────────────────────────────────────────────
 // GET /client/notifications/device-tokens
-// utile pour debug / mobile account settings
 // ──────────────────────────────────────────────────────────
 //
 router.get('/device-tokens', async (req, res, next) => {

@@ -5,9 +5,31 @@ const parseBool = (value, defaultValue = false) => {
   return String(value).toLowerCase() === 'true';
 };
 
+const port = parseInt(process.env.PORT, 10) || 5000;
+
+const jwtSecret =
+  process.env.CLIENT_JWT_SECRET ||
+  process.env.JWT_SECRET ||
+  'ikadou_dev_secret';
+
+const jwtExpiresIn =
+  process.env.CLIENT_JWT_EXPIRES_IN ||
+  process.env.JWT_EXPIRES_IN ||
+  '7d';
+
+const jwtRefreshSecret =
+  process.env.CLIENT_JWT_REFRESH_SECRET ||
+  process.env.JWT_REFRESH_SECRET ||
+  'ikadou_refresh_secret';
+
+const jwtRefreshExpiresIn =
+  process.env.CLIENT_JWT_REFRESH_EXPIRES_IN ||
+  process.env.JWT_REFRESH_EXPIRES_IN ||
+  '30d';
+
 const config = {
   env: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT, 10) || 5000,
+  port,
 
   db: {
     host: process.env.DB_HOST || 'localhost',
@@ -21,12 +43,25 @@ const config = {
     connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT_MS, 10) || 2000,
   },
 
+  /**
+   * Compatibilité :
+   * - config.jwt.secret
+   * - config.jwt.refreshSecret
+   * - config.jwtSecret
+   * - config.jwtRefreshSecret
+   */
   jwt: {
-    secret: process.env.JWT_SECRET || 'ikadou_dev_secret',
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-    refreshSecret: process.env.JWT_REFRESH_SECRET || 'ikadou_refresh_secret',
-    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
+    secret: jwtSecret,
+    expiresIn: jwtExpiresIn,
+    refreshSecret: jwtRefreshSecret,
+    refreshExpiresIn: jwtRefreshExpiresIn,
   },
+
+  // aliases racine pour l'ancien code et le code client auth
+  jwtSecret,
+  jwtExpiresIn,
+  jwtRefreshSecret,
+  jwtRefreshExpiresIn,
 
   cors: {
     allowedOrigins: (process.env.ALLOWED_ORIGINS || 'http://localhost:5173')
@@ -99,7 +134,7 @@ const config = {
 
   app: {
     url: process.env.APP_URL || 'http://localhost:5173',
-    apiUrl: process.env.API_URL || `http://localhost:${parseInt(process.env.PORT, 10) || 5000}`,
+    apiUrl: process.env.API_URL || `http://localhost:${port}`,
     supportPhone: process.env.SUPPORT_PHONE || '+22300000000',
   },
 
@@ -107,31 +142,32 @@ const config = {
     level: process.env.LOG_LEVEL || 'info',
   },
 };
+
 config.stripe = {
-  secretKey:      process.env.STRIPE_SECRET_KEY,
+  secretKey: process.env.STRIPE_SECRET_KEY,
   publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
-  webhookSecret:  process.env.STRIPE_WEBHOOK_SECRET,
-  currency:       process.env.STRIPE_CURRENCY || 'eur',
+  webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+  currency: process.env.STRIPE_CURRENCY || 'eur',
 };
 
 config.danapay = {
-  apiKey:        process.env.DANAPAY_API_KEY,
-  apiSecret:     process.env.DANAPAY_API_SECRET,
-  baseUrl:       process.env.DANAPAY_BASE_URL || 'https://api.danapay.io/v1',
+  apiKey: process.env.DANAPAY_API_KEY,
+  apiSecret: process.env.DANAPAY_API_SECRET,
+  baseUrl: process.env.DANAPAY_BASE_URL || 'https://api.danapay.io/v1',
   webhookSecret: process.env.DANAPAY_WEBHOOK_SECRET,
-  currency:      process.env.DANAPAY_CURRENCY || 'XOF',
+  currency: process.env.DANAPAY_CURRENCY || 'XOF',
 };
 
 config.payment = {
   callbackBaseUrl: process.env.PAYMENT_CALLBACK_BASE_URL || 'http://localhost:5000',
-  successUrl:      process.env.PAYMENT_SUCCESS_URL || 'http://localhost:3000/payment/success',
-  cancelUrl:       process.env.PAYMENT_CANCEL_URL  || 'http://localhost:3000/payment/cancel',
+  successUrl: process.env.PAYMENT_SUCCESS_URL || 'http://localhost:3000/payment/success',
+  cancelUrl: process.env.PAYMENT_CANCEL_URL || 'http://localhost:3000/payment/cancel',
 };
 
-config.cloudinary= {
+config.cloudinary = {
   cloudName: process.env.CLOUDINARY_CLOUD_NAME,
   apiKey: process.env.CLOUDINARY_API_KEY,
   apiSecret: process.env.CLOUDINARY_API_SECRET,
-}
+};
 
 module.exports = config;

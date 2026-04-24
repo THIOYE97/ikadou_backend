@@ -13,6 +13,30 @@ const logger = require('./utils/logger');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 
+const clientSupportRoutes = require('./routes/clientSupportRoutes');
+const clientPaymentRoutes = require('./routes/clientPaymentRoutes');
+const clientVisitRoutes = require('./routes/clientVisitRoutes');
+const clientProfileRoutes = require('./routes/clientProfileRoutes');
+const clientAuthRoutes = require('./routes/clientAuthRoutes');
+const clientNotificationsRoutes = require('./routes/clientNotificationsRoutes');
+const clientProjectRoutes = require('./routes/ClientProjectRoutes');
+const paymentMethodConfigRoutes = require('./routes/paymentMethodConfigRoutes');
+
+const leadRoutes = require('./routes/leadRoutes');
+const clientRoutes = require('./routes/clientRoutes');
+const terrainRoutes = require('./routes/terrainRoutes');
+const terrainImageRoutes = require('./routes/terrainImageRoutes');
+const zoneRoutes = require('./routes/zoneRoutes');
+const visitRoutes = require('./routes/visitRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const documentRoutes = require('./routes/documentRoutes');
+const ticketRoutes = require('./routes/ticketRoutes');
+const agentRoutes = require('./routes/agentRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+const publicRoutes = require('./routes/publicRoutes');
+
 const app = express();
 
 app.set('trust proxy', 1);
@@ -57,29 +81,50 @@ app.get('/health', (req, res) =>
 
 const API = '/api/v1';
 
+/**
+ * Core / backoffice routes
+ */
 app.use(`${API}/auth`, authRoutes);
 app.use(`${API}/users`, userRoutes);
-app.use(`${API}/leads`, require('./routes/leadRoutes'));
-app.use(`${API}/clients`, require('./routes/clientRoutes'));
-app.use(`${API}/terrains`, require('./routes/terrainRoutes'));
-app.use(`${API}/terrains`, require('./routes/terrainImageRoutes'));
-app.use(`${API}/zones`, require('./routes/zoneRoutes'));
-app.use(`${API}/visits`, require('./routes/visitRoutes'));
-app.use(`${API}/payments`, require('./routes/paymentRoutes'));
-app.use(`${API}/documents`, require('./routes/documentRoutes'));
-app.use(`${API}/tickets`, require('./routes/ticketRoutes'));
-app.use(`${API}/agents`, require('./routes/agentRoutes'));
-app.use(`${API}/notifications`, require('./routes/notificationRoutes'));
-app.use(`${API}/dashboard`, require('./routes/dashboardRoutes'));
-app.use(`${API}/reports`, require('./routes/reportRoutes'));
-app.use(`${API}/client/notifications`, require('./routes/clientNotificationsRoutes'));
-app.use(`${API}/public`, require('./routes/publicRoutes'));
-app.use(`${API}/client-auth`, require('./routes/clientAuthRoutes'));
-app.use(`${API}/client/profile`, require('./routes/clientProfileRoutes'));
-app.use(`${API}/client/visits`, require('./routes/clientVisitRoutes'));
+app.use(`${API}/leads`, leadRoutes);
+app.use(`${API}/clients`, clientRoutes);
+app.use(`${API}/terrains`, terrainRoutes);
+app.use(`${API}/terrains`, terrainImageRoutes);
+app.use(`${API}/zones`, zoneRoutes);
+app.use(`${API}/visits`, visitRoutes);
+app.use(`${API}/payments`, paymentRoutes);
+app.use(`${API}/documents`, documentRoutes);
+app.use(`${API}/tickets`, ticketRoutes);
+app.use(`${API}/agents`, agentRoutes);
+app.use(`${API}/notifications`, notificationRoutes);
+app.use(`${API}/dashboard`, dashboardRoutes);
+app.use(`${API}/reports`, reportRoutes);
+app.use(`${API}/payment-method-configs`, require('./routes/paymentMethodConfigRoutes'));
+/**
+ * Public routes
+ */
+app.use(`${API}/public`, publicRoutes);
+
+/**
+ * Client auth / profile routes
+ */
+app.use(`${API}/client-auth`, clientAuthRoutes);
+app.use(`${API}/client/profile`, clientProfileRoutes);
+
+/**
+ * Client app routes
+ */
+app.use(`${API}/client/notifications`, clientNotificationsRoutes);
+app.use(`${API}/client/visits`, clientVisitRoutes);
+app.use(`${API}/client/payments`, clientPaymentRoutes);
+app.use(`${API}/client/support`, clientSupportRoutes);
+app.use(`${API}/client/projects`, clientProjectRoutes);
 
 app.use((req, res) =>
-  res.status(404).json({ success: false, message: 'Route not found' })
+  res.status(404).json({
+    success: false,
+    message: 'Route not found',
+  })
 );
 
 app.use(errorHandler);

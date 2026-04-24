@@ -1,25 +1,29 @@
 const jwt = require('jsonwebtoken');
+const config = require('../config/env');
 
-const ACCESS_SECRET = process.env.CLIENT_JWT_SECRET || process.env.JWT_SECRET || 'change-me-client-secret';
-const ACCESS_EXPIRES_IN = process.env.CLIENT_JWT_EXPIRES_IN || '7d';
+const CLIENT_ACCESS_TOKEN_TTL = process.env.CLIENT_ACCESS_TOKEN_TTL || '30d';
 
-const signClientAccessToken = (client) => {
+function signClientAccessToken(client) {
+  if (!client?.id) {
+    throw new Error('Client id is required to sign access token');
+  }
+
   return jwt.sign(
     {
-      sub: client.id,
-      type: 'client_access',
+      clientId: client.id,
+      id: client.id,
       role: 'client',
+      email: client.email || null,
+      phone: client.phone || null,
+      status: client.status || 'active',
     },
-    ACCESS_SECRET,
-    { expiresIn: ACCESS_EXPIRES_IN }
+    config.jwtSecret,
+    {
+      expiresIn: CLIENT_ACCESS_TOKEN_TTL,
+    }
   );
-};
-
-const verifyClientAccessToken = (token) => {
-  return jwt.verify(token, ACCESS_SECRET);
-};
+}
 
 module.exports = {
   signClientAccessToken,
-  verifyClientAccessToken,
 };

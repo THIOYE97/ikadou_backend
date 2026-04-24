@@ -4,7 +4,7 @@ const logger = require('./utils/logger');
 const { pool } = require('./data/db');
 
 
-const server = app.listen(config.port, () => {
+const server = app.listen(config.port, '0.0.0.0' , () => {
   logger.info(`
   ╔════════════════════════════════════════╗
   ║        🌍  IKADOU BACKEND API          ║
